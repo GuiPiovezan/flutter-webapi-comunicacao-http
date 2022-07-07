@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:bytebank/components/progress.dart';
 import 'package:bytebank/components/response_dialog.dart';
 import 'package:bytebank/components/transactions_auth_dialog.dart';
 import 'package:bytebank/http/webclients/transaction_webclient.dart';
@@ -22,9 +23,10 @@ class _TransactionFormState extends State<TransactionForm> {
   final TransactionWebClient _webClient = TransactionWebClient();
   final transactionId = Uuid().v4();
 
+  bool _send = false;
+
   @override
   Widget build(BuildContext context) {
-    print(transactionId);
     return Scaffold(
       appBar: AppBar(
         title: Text('New transaction'),
@@ -82,7 +84,16 @@ class _TransactionFormState extends State<TransactionForm> {
                     },
                   ),
                 ),
-              )
+              ),
+              Visibility(
+                child: Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Progress(
+                    message: 'Sending...',
+                  ),
+                ),
+                visible: _send,
+              ),
             ],
           ),
         ),
@@ -91,13 +102,17 @@ class _TransactionFormState extends State<TransactionForm> {
   }
 
   void _save(Transaction transactionCreated, String password) async {
-    Transaction transaction = await _send(transactionCreated, password);
+    Transaction transaction =
+        await _sendTransaction(transactionCreated, password);
 
     _showSuccessfulMessage(transaction);
   }
 
-  Future<Transaction> _send(
+  Future<Transaction> _sendTransaction(
       Transaction transactionCreated, String password) async {
+    setState(() {
+      _send = true;
+    });
     Transaction transaction =
         await _webClient.save(transactionCreated, password).catchError((ex) {
       _showFailureMessage(message: ex.message);
@@ -105,7 +120,15 @@ class _TransactionFormState extends State<TransactionForm> {
       _showFailureMessage(message: 'timeout submitting the transaction');
     }, test: (ex) => ex is TimeoutException).catchError((ex) {
       _showFailureMessage();
-    }, test: (ex) => ex is Exception);
+    }, test: (ex) => ex is Exception).whenComplete(
+      () => {
+        setState(
+          () {
+            _send = false;
+          },
+        ),
+      },
+    );
     return transaction;
   }
 
