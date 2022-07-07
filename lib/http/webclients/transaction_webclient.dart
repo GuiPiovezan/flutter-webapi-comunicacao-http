@@ -29,16 +29,25 @@ class TransactionWebClient {
       return Transaction.fromJson(jsonDecode(response.body));
     }
 
-    throw new HttpException(_statusCodeResponses[response.statusCode]);
+    throw new HttpException(_getResponseMessage(response.statusCode));
+  }
+
+  String _getResponseMessage(int statusCode) {
+    if (_statusCodeResponses.containsKey(statusCode)) {
+      return _statusCodeResponses[statusCode];
+    }
+
+    return 'Unknown error';
   }
 
   static final Map<int, String> _statusCodeResponses = {
     400: 'there was error on submitting transaction',
     401: 'authentication failed',
+    409: 'transaction already exists',
   };
 }
 
-class HttpException implements Exception{
+class HttpException implements Exception {
   final String message;
 
   HttpException(this.message);
